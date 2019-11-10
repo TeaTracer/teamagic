@@ -5,4 +5,4 @@ format:
 	black --line-length 79 magic
 
 test:
-	python3 -m pytest
+	python3 -m pytest -x

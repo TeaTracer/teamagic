@@ -1,0 +1,7 @@
+[MASTER]
+disable=
+    fixme,
+    too-few-public-methods,
+    pointless-statement,
+    missing-docstring,
+    no-member

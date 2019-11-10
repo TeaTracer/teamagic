@@ -4,6 +4,12 @@ import json
 import inspect
 
 
+class MagicError(Exception):
+    """ base magic exception """
+
+    pass
+
+
 class BaseMagicAction:
     """ Base class for magic actions """
 
@@ -111,5 +117,24 @@ class JSON(MagicDataConverter):
     def magic_at(self, key):
         """ implement magic action for At() """
         # TODO optimize object creation
-        # TODO add positional access like JSON('[0,1,2]').at(0)
-        return self.__class__(self._convert_out(self._data[key]))
+        if isinstance(self.unwrapped, list):
+            if isinstance(key, int):
+                value = self.unwrapped[key]
+            else:
+                raise MagicError(
+                    "JSON method At needs int key for handle lists"
+                )
+        elif isinstance(self.unwrapped, dict):
+            if not isinstance(key, str):
+                raise MagicError(
+                    "JSON method At needs str key for handle objects"
+                )
+            if key not in self.unwrapped:
+                raise MagicError("{} doesn't have {} key".format(self, key))
+            value = self.unwrapped[key]
+        else:
+            raise MagicError(
+                "JSON method At supports only lists and objects handling"
+            )
+
+        return self.__class__(self._convert_out(value))

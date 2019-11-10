@@ -1,4 +1,4 @@
-from magic import Miracle, JSON, At, Each, Itself
+from magic import Miracle, JSON, CSV, At, Each, Itself
 
 
 def test_magic_at():
@@ -103,3 +103,19 @@ def test_magic_each_each():
     assert users[0].users[0].name == "Alex"
     assert users[0].users[1].name == "Den"
     assert users[1].users[0].name == "Brad"
+
+
+def test_magic_at_csv():
+    class MiracleUser(Miracle):
+        name = At(0)
+        age = At(1, convertion=int)
+
+    class MiracleData(Miracle):
+        users = Each(MiracleUser)
+
+    with open("tests/csv_test.csv") as csv_file:
+        users = MiracleData(CSV(csv_file)).users
+    assert users[0].name == "Alex"
+    assert users[0].age == 34
+    assert users[1].name == "Den"
+    assert users[1].age == 22

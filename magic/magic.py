@@ -1,6 +1,7 @@
 """ yet another magic library """
 import abc
 import json
+import csv
 import inspect
 
 
@@ -13,8 +14,10 @@ class MagicError(Exception):
 class BaseMagicAction:
     """ Base class for magic actions """
 
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         self.args = args
+        self.kwargs = kwargs
+        self.convertion = kwargs.get("convertion")
 
 
 class MagicActionsAppliedMetaclass(type):
@@ -48,6 +51,8 @@ class MagicActionsAppliedMetaclass(type):
                 value = value_after_magic.unwrapped
             else:
                 value = value_after_magic
+            if action.convertion:
+                value = action.convertion(value)
             setattr(obj, attr, value)
         return obj
 
@@ -72,6 +77,9 @@ class MagicDataConverter(abc.ABC):
 
     def __str__(self):
         return "{}".format(self.unwrapped)
+
+    def __repr__(self):
+        return "{}({})".format(self.__class__, self.unwrapped)
 
     @abc.abstractmethod
     def _convert_in(self, input_data):
@@ -167,7 +175,6 @@ class JSON(MagicDataConverter):
 
     def magic_at(self, key):
         """ implement magic action for At() """
-        # TODO optimize object creation
         if isinstance(self.unwrapped, list):
             if isinstance(key, int):
                 value = self.unwrapped[key]
@@ -201,6 +208,63 @@ class JSON(MagicDataConverter):
             return result
         else:
             raise MagicError("JSON method Each supports only lists")
+
+    def magic_itself(self):
+        """ implement magic action for Itself() """
+        return self
+
+
+class CSV(MagicDataConverter):
+    """ Handle magic for CSV input """
+
+    @staticmethod
+    def read_file(fileobj):
+        """ convert csv file to list """
+        return list(csv.reader(fileobj))
+
+    def _convert_in(self, input_data):
+        if hasattr(input_data, "read"):
+            return self.read_file(input_data)
+        elif isinstance(input_data, str):
+            return input_data.split(",")
+        elif isinstance(input_data, list):
+            return input_data
+        else:
+            raise MagicError("CSV input types should be file, str or list")
+
+    def _convert_out(self, output_data):
+        return output_data
+
+    def magic_at(self, key):
+        """ implement magic action for At() """
+        if isinstance(self.unwrapped, list):
+            if isinstance(key, int):
+                value = self.unwrapped[key]
+            else:
+                raise MagicError(
+                    "CSV method At needs int key for handle lists"
+                    ", not {} {}".format(key, self)
+                )
+        else:
+            raise MagicError(
+                "CSV method At supports only lists and objects handling"
+            )
+
+        return value
+
+    def magic_each(self, func):
+        """ implement magic action for Each() """
+        if isinstance(self.unwrapped, list):
+            result = []
+            for element in self.unwrapped:
+                result.append(func(CSV(self._convert_out(element))))
+            return result
+        else:
+            raise MagicError(
+                "CSV method Each supports only lists, not {}".format(
+                    self.unwrapped
+                )
+            )
 
     def magic_itself(self):
         """ implement magic action for Itself() """

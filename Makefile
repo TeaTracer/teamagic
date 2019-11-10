@@ -7,4 +7,4 @@ format:
 	black --line-length 79 tests
 
 test:
-	python3 -m pytest -x
+	python3 -m pytest -x -l

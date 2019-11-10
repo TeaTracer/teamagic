@@ -44,8 +44,10 @@ class MagicActionsAppliedMetaclass(type):
             value_after_magic = action.apply_magic(target)
             if isinstance(value_after_magic, Miracle):
                 value = value_after_magic
-            else:
+            elif isinstance(value_after_magic, MagicDataConverter):
                 value = value_after_magic.unwrapped
+            else:
+                value = value_after_magic
             setattr(obj, attr, value)
         return obj
 
@@ -87,8 +89,16 @@ class MagicAction(BaseMagicAction):
 
     magic_method = "magic"
 
+
+class At(MagicAction):
+    """ Magic action for getting data internal fields """
+
+    magic_method = "magic_at"
+
     def apply_magic(self, target):
-        """ Action("a", "b", MiracleUser) """
+        """ At("a", "b", MiracleUser)
+            At(0)
+        """
         for field in self.args:
             if isinstance(field, MagicAction):
                 target = field.apply_magic(target)
@@ -99,10 +109,51 @@ class MagicAction(BaseMagicAction):
         return target
 
 
-class At(MagicAction):
-    """ Magic action for getting data internal fields """
+class Each(MagicAction):
+    """ Magic action for fetching data iterables """
 
-    magic_method = "magic_at"
+    magic_method = "magic_each"
+
+    def apply_magic(self, target):
+        """ Each(MiracleUser)
+        """
+
+        def dummy_func(argument):
+            """ return itself """
+            return argument
+
+        func = dummy_func
+        for field in self.args:
+            if isinstance(field, MagicAction):
+
+                def magic_func(argument):
+                    """ apply some magic """
+                    return field.apply_magic(argument)
+
+                func = magic_func
+            elif inspect.isclass(field) and issubclass(field, Miracle):
+
+                def miracle_func(argument):
+                    """ pass data to miracle class """
+                    return field(argument)
+
+                func = miracle_func
+            else:
+                raise MagicError("Not implemented")
+            break
+
+        return getattr(target, self.magic_method)(func)
+
+
+class Itself(MagicAction):
+    """ Magic action for getting data as is"""
+
+    magic_method = "magic_itself"
+
+    @staticmethod
+    def apply_magic(target):
+        """ Itself() """
+        return target
 
 
 class JSON(MagicDataConverter):
@@ -123,11 +174,13 @@ class JSON(MagicDataConverter):
             else:
                 raise MagicError(
                     "JSON method At needs int key for handle lists"
+                    ", not {} {}".format(key, self)
                 )
         elif isinstance(self.unwrapped, dict):
             if not isinstance(key, str):
                 raise MagicError(
                     "JSON method At needs str key for handle objects"
+                    ", not {}".format(key)
                 )
             if key not in self.unwrapped:
                 raise MagicError("{} doesn't have {} key".format(self, key))
@@ -138,3 +191,17 @@ class JSON(MagicDataConverter):
             )
 
         return self.__class__(self._convert_out(value))
+
+    def magic_each(self, func):
+        """ implement magic action for Each() """
+        if isinstance(self.unwrapped, list):
+            result = []
+            for element in self.unwrapped:
+                result.append(func(JSON(self._convert_out(element))))
+            return result
+        else:
+            raise MagicError("JSON method Each supports only lists")
+
+    def magic_itself(self):
+        """ implement magic action for Itself() """
+        return self

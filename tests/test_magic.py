@@ -1,16 +1,12 @@
-from magic import Miracle, JSON, At
+from magic import Miracle, JSON, At, Each, Itself
 
 
 def test_magic_at():
     class MiracleUser(Miracle):
-        """ Test User magic class """
-
         name = At("name")
         age = At("age")
 
     class MiracleData(Miracle):
-        """ Test Data magic class """
-
         user = At("a", "c", MiracleUser)
 
     test_input_data = '{"a": {"c": {"name": "Alex", "age": 34}}}'
@@ -21,14 +17,10 @@ def test_magic_at():
 
 def test_magic_at_multiple_fields():
     class MiracleUser(Miracle):
-        """ Test User magic class """
-
         name = At("name")
         age = At("other", "age")
 
     class MiracleData(Miracle):
-        """ Test Data magic class """
-
         user = At("c", MiracleUser)
 
     test_input_data = '{"c": {"name": "Alex", "other": {"age": 34}}}'
@@ -39,8 +31,6 @@ def test_magic_at_multiple_fields():
 
 def test_magic_at_positional():
     class MiracleUser(Miracle):
-        """ Test User magic class """
-
         name = At(0)
         age = At(1)
 
@@ -48,3 +38,68 @@ def test_magic_at_positional():
     user = MiracleUser(JSON(test_input_data))
     assert user.name == "Alex"
     assert user.age == 34
+
+
+def test_magic_each():
+    class MiracleUser(Miracle):
+        name = At("name")
+
+    class MiracleData(Miracle):
+        users = Each(MiracleUser)
+
+    test_input_data = '[{"name": "Alex"}, {"name": "Den"}]'
+    users = MiracleData(JSON(test_input_data)).users
+    assert users[0].name == "Alex"
+    assert users[1].name == "Den"
+
+
+def test_itself():
+    class MiracleUser(Miracle):
+        name = Itself()
+
+    test_input_data = '"Alex"'
+    user = MiracleUser(JSON(test_input_data))
+    assert user.name == "Alex"
+
+
+def test_itself_double():
+    class MiracleUser(Miracle):
+        name = Itself()
+        name_bkp = Itself()
+
+    test_input_data = '"Alex"'
+    user = MiracleUser(JSON(test_input_data))
+    assert user.name == "Alex"
+    assert user.name_bkp == "Alex"
+
+
+def test_magic_each_positional():
+    class MiracleUser(Miracle):
+        name = Itself()
+
+    class MiracleData(Miracle):
+        users = Each(MiracleUser)
+
+    test_input_data = '["Alex", "Den"]'
+    users = MiracleData(JSON(test_input_data)).users
+    assert users[0].name == "Alex"
+    assert users[1].name == "Den"
+
+
+def test_magic_each_each():
+    class MiracleUser(Miracle):
+        name = At("name")
+
+    class MiracleUsers(Miracle):
+        users = Each(MiracleUser)
+
+    class MiracleData(Miracle):
+        users = Each(MiracleUsers)
+
+    test_input_data = (
+        '[[{"name": "Alex"}, {"name": "Den"}], [{"name": "Brad"}]]'
+    )
+    users = MiracleData(JSON(test_input_data)).users
+    assert users[0].users[0].name == "Alex"
+    assert users[0].users[1].name == "Den"
+    assert users[1].users[0].name == "Brad"

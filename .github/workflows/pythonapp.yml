@@ -19,6 +19,9 @@ jobs:
         pip install -r requirements.txt
     - name: Lint
       run: |
+        python -V
+        pip --version
+        pylint --version
         make lint
     - name: Test with pytest
       run: |

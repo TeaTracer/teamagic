@@ -1,4 +1,4 @@
-name: Python application
+name: Github Actions CI
 
 on: [push]
 

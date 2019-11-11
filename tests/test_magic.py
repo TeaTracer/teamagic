@@ -1,5 +1,5 @@
-from magic import Miracle, JSON, CSV, At, Each, Itself
-
+from magic import Miracle, JSON, CSV, XML, At, Each, Itself
+from .data_for_tests import COUNTRY_XML
 
 def test_magic_at():
     class MiracleUser(Miracle):
@@ -119,3 +119,50 @@ def test_magic_at_csv():
     assert users[0].age == 34
     assert users[1].name == "Den"
     assert users[1].age == 22
+
+
+def test_magic_xml():
+
+    class MiracleCountry(Miracle):
+        name = At("name", is_attr=True)
+        rank = At("rank", convertion=int)
+        year = At("year", convertion=int)
+
+    class MiracleData(Miracle):
+        countries = Each("country", MiracleCountry)
+
+    countries = MiracleData(XML(COUNTRY_XML)).countries
+    assert countries[0].name == "Liechtenstein"
+    assert countries[1].name == "Singapore"
+    assert countries[2].name == "Panama"
+    assert countries[0].rank == 1
+    assert countries[0].year == 2008
+
+def test_magic_xml_neigbors():
+    class MiracleNeigbor(Miracle):
+        name = At("name", is_attr=True)
+        direction = At("direction", is_attr=True)
+
+    class MiracleCountry(Miracle):
+        name = At("name", is_attr=True)
+        rank = At("rank", convertion=int)
+        year = At("year", convertion=int)
+        neigbors = Each("neighbor", MiracleNeigbor)
+
+    class MiracleData(Miracle):
+        countries = Each("country", MiracleCountry)
+
+    countries = MiracleData(XML(COUNTRY_XML)).countries
+    assert countries[0].name == "Liechtenstein"
+    assert countries[1].name == "Singapore"
+    assert countries[2].name == "Panama"
+    assert countries[0].rank == 1
+    assert countries[0].year == 2008
+    assert countries[0].neigbors[0].name == "Austria"
+    assert countries[0].neigbors[0].direction == "E"
+    assert countries[0].neigbors[1].name == "Switzerland"
+    assert countries[0].neigbors[1].direction == "W"
+    assert countries[1].neigbors[0].name == "Malaysia"
+    assert countries[1].neigbors[0].direction == "N"
+    assert len(countries[0].neigbors) == 2
+    assert len(countries[1].neigbors) == 1

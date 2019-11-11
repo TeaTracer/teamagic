@@ -2,6 +2,7 @@
 import abc
 import json
 import csv
+import xml.etree.ElementTree as ET
 import inspect
 
 
@@ -17,7 +18,6 @@ class BaseMagicAction:
     def __init__(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
-        self.convertion = kwargs.get("convertion")
 
 
 class MagicActionsAppliedMetaclass(type):
@@ -25,10 +25,11 @@ class MagicActionsAppliedMetaclass(type):
 
         class User(Magic):
             name = At("name")
-            age = At("age")
+            age = At("age", convertion=int)
 
         user = User(x)
-        print(user.name, user.age)
+        user.name
+        user.age
     """
 
     def __new__(mcs, name, bases, attrs):
@@ -51,8 +52,8 @@ class MagicActionsAppliedMetaclass(type):
                 value = value_after_magic.unwrapped
             else:
                 value = value_after_magic
-            if action.convertion:
-                value = action.convertion(value)
+            if "convertion" in action.kwargs:
+                value = action.kwargs.get("convertion")(value)
             setattr(obj, attr, value)
         return obj
 
@@ -97,6 +98,9 @@ class MagicAction(BaseMagicAction):
 
     magic_method = "magic"
 
+    def magic_itself(self):
+        """ implement magic action for Itself() """
+        return self
 
 class At(MagicAction):
     """ Magic action for getting data internal fields """
@@ -113,7 +117,7 @@ class At(MagicAction):
             elif inspect.isclass(field) and issubclass(field, Miracle):
                 return field(target)
             else:
-                target = getattr(target, self.magic_method)(field)
+                target = getattr(target, self.magic_method)(field, **self.kwargs)
         return target
 
 
@@ -147,7 +151,11 @@ class Each(MagicAction):
 
                 func = miracle_func
             else:
-                raise MagicError("Not implemented")
+                def at_func(argument):
+                    """ step deeper """
+                    return At(*self.args).apply_magic(argument)
+
+                func = at_func
             break
 
         return getattr(target, self.magic_method)(func)
@@ -173,7 +181,7 @@ class JSON(MagicDataConverter):
     def _convert_out(self, output_data):
         return json.dumps(output_data)
 
-    def magic_at(self, key):
+    def magic_at(self, key, **kwargs):
         """ implement magic action for At() """
         if isinstance(self.unwrapped, list):
             if isinstance(key, int):
@@ -209,10 +217,6 @@ class JSON(MagicDataConverter):
         else:
             raise MagicError("JSON method Each supports only lists")
 
-    def magic_itself(self):
-        """ implement magic action for Itself() """
-        return self
-
 
 class CSV(MagicDataConverter):
     """ Handle magic for CSV input """
@@ -235,7 +239,7 @@ class CSV(MagicDataConverter):
     def _convert_out(self, output_data):
         return output_data
 
-    def magic_at(self, key):
+    def magic_at(self, key, **kwargs):
         """ implement magic action for At() """
         if isinstance(self.unwrapped, list):
             if isinstance(key, int):
@@ -266,6 +270,44 @@ class CSV(MagicDataConverter):
                 )
             )
 
-    def magic_itself(self):
-        """ implement magic action for Itself() """
-        return self
+class XML(MagicDataConverter):
+    """ Handle magic for XML input """
+
+    def _convert_in(self, input_data):
+        return ET.ElementTree(ET.fromstring(input_data.strip())).getroot()
+
+    def _convert_out(self, output_data):
+        return ET.tostring(output_data)
+
+    def magic_at(self, key, **kwargs):
+        """ implement magic action for At() """
+        if kwargs.get("is_attr"):
+            return self.unwrapped.attrib.get(key)
+
+        if isinstance(self.unwrapped, ET.Element):
+            if self.unwrapped.tag == key:
+                return self
+            for child in self.unwrapped.getchildren():
+                if child.tag == key:
+                    if not len(child.getchildren()):
+                        return child.text
+                    return self.__class__(self._convert_out(child))
+
+        if isinstance(self.unwrapped, ET.ElementTree):
+            for child in self.unwrapped.getroot().getchildren():
+                if child.tag == key:
+                    return self.__class__(self._convert_out(child))
+        raise MagicError("XML {} does not have key '{}' {}".format(self, key, kwargs))
+
+    def magic_each(self, func):
+        """ implement magic action for Each() """
+        result = []
+        for child in self.unwrapped.getchildren():
+            try:
+                data = func(XML(self._convert_out(child)))
+            except MagicError:
+                continue
+            if isinstance(data, ET.ElementTree) or isinstance(data, ET.Element):
+                data = self.__class__(data)
+            result.append(data)
+        return result

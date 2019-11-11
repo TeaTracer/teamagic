@@ -102,6 +102,7 @@ class MagicAction(BaseMagicAction):
         """ implement magic action for Itself() """
         return self
 
+
 class At(MagicAction):
     """ Magic action for getting data internal fields """
 
@@ -117,7 +118,9 @@ class At(MagicAction):
             elif inspect.isclass(field) and issubclass(field, Miracle):
                 return field(target)
             else:
-                target = getattr(target, self.magic_method)(field, **self.kwargs)
+                target = getattr(target, self.magic_method)(
+                    field, **self.kwargs
+                )
         return target
 
 
@@ -151,6 +154,7 @@ class Each(MagicAction):
 
                 func = miracle_func
             else:
+
                 def at_func(argument):
                     """ step deeper """
                     return At(*self.args).apply_magic(argument)
@@ -189,13 +193,13 @@ class JSON(MagicDataConverter):
             else:
                 raise MagicError(
                     "JSON method At needs int key for handle lists"
-                    ", not {} {}".format(key, self)
+                    ", not {} {} {}".format(key, self, kwargs)
                 )
         elif isinstance(self.unwrapped, dict):
             if not isinstance(key, str):
                 raise MagicError(
                     "JSON method At needs str key for handle objects"
-                    ", not {}".format(key)
+                    ", not {} {}".format(key, kwargs)
                 )
             if key not in self.unwrapped:
                 raise MagicError("{} doesn't have {} key".format(self, key))
@@ -247,7 +251,7 @@ class CSV(MagicDataConverter):
             else:
                 raise MagicError(
                     "CSV method At needs int key for handle lists"
-                    ", not {} {}".format(key, self)
+                    ", not {} {} {}".format(key, self, kwargs)
                 )
         else:
             raise MagicError(
@@ -270,6 +274,7 @@ class CSV(MagicDataConverter):
                 )
             )
 
+
 class XML(MagicDataConverter):
     """ Handle magic for XML input """
 
@@ -289,7 +294,7 @@ class XML(MagicDataConverter):
                 return self
             for child in self.unwrapped.getchildren():
                 if child.tag == key:
-                    if not len(child.getchildren()):
+                    if not child.getchildren():
                         return child.text
                     return self.__class__(self._convert_out(child))
 
@@ -297,7 +302,9 @@ class XML(MagicDataConverter):
             for child in self.unwrapped.getroot().getchildren():
                 if child.tag == key:
                     return self.__class__(self._convert_out(child))
-        raise MagicError("XML {} does not have key '{}' {}".format(self, key, kwargs))
+        raise MagicError(
+            "XML {} does not have key '{}' {}".format(self, key, kwargs)
+        )
 
     def magic_each(self, func):
         """ implement magic action for Each() """
@@ -307,7 +314,7 @@ class XML(MagicDataConverter):
                 data = func(XML(self._convert_out(child)))
             except MagicError:
                 continue
-            if isinstance(data, ET.ElementTree) or isinstance(data, ET.Element):
+            if isinstance(data, (ET.ElementTree, ET.Element)):
                 data = self.__class__(data)
             result.append(data)
         return result

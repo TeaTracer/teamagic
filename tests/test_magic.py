@@ -1,6 +1,7 @@
 from magic import Miracle, JSON, CSV, XML, At, Each, Itself
 from .data_for_tests import COUNTRY_XML
 
+
 def test_magic_at():
     class MiracleUser(Miracle):
         name = At("name")
@@ -122,7 +123,6 @@ def test_magic_at_csv():
 
 
 def test_magic_xml():
-
     class MiracleCountry(Miracle):
         name = At("name", is_attr=True)
         rank = At("rank", convertion=int)
@@ -137,6 +137,7 @@ def test_magic_xml():
     assert countries[2].name == "Panama"
     assert countries[0].rank == 1
     assert countries[0].year == 2008
+
 
 def test_magic_xml_neigbors():
     class MiracleNeigbor(Miracle):

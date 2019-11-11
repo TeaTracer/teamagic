@@ -19,6 +19,9 @@ class BaseMagicAction:
         self.args = args
         self.kwargs = kwargs
 
+    def __str__(self):
+        return "{}()".format(self.__class__.__name__)
+
 
 class MagicActionsAppliedMetaclass(type):
     """ Metaclass for adding magic attributes.
@@ -63,6 +66,9 @@ class Miracle(metaclass=MagicActionsAppliedMetaclass):
 
     def __init__(self, target):
         pass
+
+    def __str__(self):
+        return "{}()".format(self.__class__.__name__)
 
 
 class MagicDataConverter(abc.ABC):

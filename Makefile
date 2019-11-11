@@ -12,8 +12,19 @@ format:
 test:
 	${PYTHON} -m pytest -x -l
 
-install: checkinstall
+install:
 	${PYTHON} setup.py install
+
+devinstall: checkinstall venv
+	. .venv/bin/activate
+	.venv/bin/python3 setup.py install
+
+venv:
+	${PYTHON} -m venv .venv
 
 checkinstall:
 	${PYTHON} setup.py check -m -s
+
+python: venv
+	. .venv/bin/activate
+	.venv/bin/python3

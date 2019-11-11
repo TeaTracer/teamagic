@@ -1,4 +1,4 @@
-from magic import Miracle, JSON, CSV, XML, At, Each, Itself
+from teamagic import Miracle, JSON, CSV, XML, At, Each, Itself
 from .data_for_tests import COUNTRY_XML
 
 

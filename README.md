@@ -1,6 +1,8 @@
 # Tea Magic
 ![](https://github.com/TeaTracer/teamagic/workflows/Github%20Actions%20CI/badge.svg)
 
+![Tea Magic Demo](/examples/assets/teamagic_demo.gif?raw=true "Tea Magic Demo")
+
 ## Intall library to virtual environment
 
 make devinstall

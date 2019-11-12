@@ -293,19 +293,19 @@ class XML(MagicDataConverter):
     def magic_at(self, key, **kwargs):
         """ implement magic action for At() """
         if kwargs.get("is_attr"):
-            return self.unwrapped.attrib.get(key)
+            return self._data.attrib.get(key)
 
-        if isinstance(self.unwrapped, ET.Element):
-            if self.unwrapped.tag == key:
+        if isinstance(self._data, ET.Element):
+            if self._data.tag == key:
                 return self
-            for child in self.unwrapped.getchildren():
+            for child in self._data.getchildren():
                 if child.tag == key:
                     if not child.getchildren():
                         return child.text
                     return self.__class__(self._convert_out(child))
 
-        if isinstance(self.unwrapped, ET.ElementTree):
-            for child in self.unwrapped.getroot().getchildren():
+        if isinstance(self._data, ET.ElementTree):
+            for child in self._data.getroot().getchildren():
                 if child.tag == key:
                     return self.__class__(self._convert_out(child))
         raise MagicError(
@@ -315,7 +315,7 @@ class XML(MagicDataConverter):
     def magic_each(self, func):
         """ implement magic action for Each() """
         result = []
-        for child in self.unwrapped.getchildren():
+        for child in self._data.getchildren():
             try:
                 data = func(XML(self._convert_out(child)))
             except MagicError:
@@ -324,3 +324,8 @@ class XML(MagicDataConverter):
                 data = self.__class__(data)
             result.append(data)
         return result
+
+    @property
+    def unwrapped(self):
+        """ python data structure behind MagicDataConverter instance """
+        return self._data.text
